@@ -1,0 +1,17 @@
+IR Sensor Calibration
+Adjusting Detection Range:
+I tested the IR sensors at different distances to find the most accurate detection range. At first, the sensors were either too sensitive or not detecting people at all. So, I adjusted their positions and angles until they consistently detected someone walking through the entrance.
+
+Aligning the Sensors:
+It was important to place the two IR sensors correctly, one after the other, to determine the direction of movement—whether someone was entering or exiting. I carefully aligned them so the system could correctly differentiate the sequence in which the sensors were triggered.
+
+ESP32-CAM Calibration
+Setting the Camera Angle:
+I positioned the camera in a way that it could clearly capture the entry area. I tried different angles and heights to make sure the faces and movements of people entering or exiting were visible in the video.
+
+Lighting Adjustments:
+Since lighting conditions change throughout the day, I tested the camera under different conditions—bright daylight, indoor lighting, and dim light. I adjusted the exposure and brightness settings in the code to maintain clear visibility in the recordings.
+
+Why Calibration Was Important
+Calibration helped me ensure that the system was both accurate and reliable. Without proper calibration, the sensors might have miscounted people or the camera might have failed to record clearly. By calibrating each part, I reduced false readings, improved performance, and made the whole setup more efficient and dependable.
+

@@ -1,0 +1,128 @@
+#include <ESP32Servo.h>
+#define IR_SENSOR_1 12   // Entry side sensor
+#define IR_SENSOR_2 23    // Exit side sensor
+#define GREEN_LED 16     // Entry LED
+#define RED_LED 17       // Exit LED
+#define SERVO_PIN 26     // Servo control
+#define BUZZER_PIN 18    // Buzzer control
+#define MAX_CAPACITY 5  // Maximum people allowed
+
+Servo doorServo;
+int peopleCount = 0;
+unsigned long lastTriggerTime = 0;
+bool entryStarted = false;
+bool exitStarted = false;
+bool doorOpen = false;
+unsigned long doorOpenTime = 0;
+const unsigned long detectionWindow = 2000;   // 2-second sequence window
+const unsigned long doorOpenDuration = 3000;  // 3 seconds door open time
+
+void setup() {
+  pinMode(IR_SENSOR_1, INPUT_PULLUP);
+  pinMode(IR_SENSOR_2, INPUT_PULLUP);
+  pinMode(GREEN_LED, OUTPUT);
+  pinMode(RED_LED, OUTPUT);
+  pinMode(BUZZER_PIN, OUTPUT);
+  digitalWrite(BUZZER_PIN, LOW);  // Initialize buzzer OFF
+  
+  doorServo.attach(SERVO_PIN);
+  doorServo.write(0);  // Start with closed door
+  Serial.begin(115200);
+  Serial.println("\nSystem Initialized");
+}
+
+void loop() {
+  int sensor1State = digitalRead(IR_SENSOR_1);
+  int sensor2State = digitalRead(IR_SENSOR_2);
+
+  // Auto-close door after duration
+  if (doorOpen && (millis() - doorOpenTime >= doorOpenDuration)) {
+    closeDoor();
+  }
+
+  // Entry sequence (IR1 -> IR2)
+  if (sensor1State == LOW && !entryStarted && !exitStarted) {
+    if (peopleCount < MAX_CAPACITY) {
+      entryStarted = true;
+      openDoor();
+      lastTriggerTime = millis();
+      Serial.println("Entry sequence initiated");
+    } else {
+      Serial.println("Entry denied: Capacity full");
+      triggerBuzzer();
+    }
+  }
+
+  // Exit sequence (IR2 -> IR1)
+  if (sensor2State == LOW && !exitStarted && !entryStarted) {
+    exitStarted = true;
+    openDoor();  // Added door opening for exit
+    lastTriggerTime = millis();
+    Serial.println("Exit sequence initiated");
+  }
+
+  // Confirm entry completion
+  if (entryStarted) {
+    if (sensor2State == LOW) {
+      peopleCount++;
+      confirmEntry();
+      entryStarted = false;
+    }
+    else if (millis() - lastTriggerTime > detectionWindow) {
+      Serial.println("Entry timed out");
+      entryStarted = false;
+    }
+  }
+
+  // Confirm exit completion
+  if (exitStarted) {
+    if (sensor1State == LOW) {
+      peopleCount = max(0, peopleCount - 1);
+      confirmExit();
+      exitStarted = false;
+    }
+    else if (millis() - lastTriggerTime > detectionWindow) {
+      Serial.println("Exit timed out");
+      exitStarted = false;
+    }
+  }
+}
+
+void openDoor() {
+  if (!doorOpen) {
+    doorServo.write(90);  // Open door
+    doorOpen = true;
+    doorOpenTime = millis();
+    Serial.println("Door opened");
+  }
+}
+
+void closeDoor() {
+  if (doorOpen) {
+    doorServo.write(0);  // Close door
+    doorOpen = false;
+    Serial.println("Door closed");
+  }
+}
+
+void confirmEntry() {
+  Serial.print("Person entered. Total: ");
+  Serial.println(peopleCount);
+  digitalWrite(GREEN_LED, HIGH);
+  delay(300);
+  digitalWrite(GREEN_LED, LOW);
+}
+
+void confirmExit() {
+  Serial.print("Person exited. Total: ");
+  Serial.println(peopleCount);
+  digitalWrite(RED_LED, HIGH);
+  delay(300);
+  digitalWrite(RED_LED, LOW);
+}
+
+void triggerBuzzer() {
+  digitalWrite(BUZZER_PIN, HIGH);  // Corrected buzzer activation
+  delay(1000);  // Longer alert for full capacity
+  digitalWrite(BUZZER_PIN, LOW);
+}
